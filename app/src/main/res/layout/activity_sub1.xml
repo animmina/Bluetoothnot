@@ -40,6 +40,7 @@
             app:layout_constraintEnd_toEndOf="parent"
             android:layout_marginTop="16dp" />
 
+
         <!-- Newly added TextView for PM2.5 value -->
         <TextView
             android:id="@+id/pm25"
@@ -52,6 +53,8 @@
             app:layout_constraintEnd_toEndOf="parent"
             android:layout_marginTop="20dp" />
 
+
+
         <!-- TextView "냉장고 속 재료" -->
         <TextView
             android:id="@+id/textView"
@@ -62,6 +65,8 @@
             android:textColor="#1F51B7"
             android:textSize="24sp"
             app:layout_constraintTop_toBottomOf="@+id/pm25" />
+
+
 
         <!-- ListView for the items -->
         <ListView
