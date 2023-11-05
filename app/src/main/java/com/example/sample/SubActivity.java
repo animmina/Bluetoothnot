@@ -407,11 +407,16 @@ public class SubActivity extends AppCompatActivity {
                                     System.arraycopy(readBuffer, 0, encodedBytes, 0, encodedBytes.length);
                                     final String text = new String(encodedBytes, "US-ASCII");
                                     readBufferPosition = 0;
+
                                     handler.post(new Runnable() {
                                         @Override
                                         public void run() {
+                                            // 데이터를 TextView에 표시합니다.
                                             textView_pm25.setText(text);
 
+                                            // 상품명만을 사용하여 상품 객체 생성 및 Firebase에 저장
+                                            ProductItem productItem = new ProductItem(text.trim(), null, 0);
+                                            saveToFirebase(productItem);
                                         }
                                     });
                                 } else {
