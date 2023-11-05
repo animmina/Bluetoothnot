@@ -44,6 +44,58 @@ import com.example.sample.ProductItem;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+
+import android.Manifest;
+import android.app.Activity;
+import android.app.Dialog;
+import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothSocket;
+import android.content.Context;
+import android.content.DialogInterface;
+import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
+import android.location.Address;
+import android.location.Geocoder;
+import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
+import android.media.Image;
+import android.os.Bundle;
+import android.os.Handler;
+import android.os.Process;
+import android.provider.Settings;
+import android.util.Log;
+import android.view.View;
+import android.view.Window;
+import android.view.WindowManager;
+import android.widget.Button;
+import android.widget.CompoundButton;
+import android.widget.ImageButton;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.TextView;
+import android.widget.Toast;
+import android.widget.ToggleButton;
+
+import org.w3c.dom.Text;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.lang.reflect.Array;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+import java.util.Set;
+import java.util.UUID;
 
 public class SubActivity extends AppCompatActivity {
     private DatabaseReference mDatabase;
@@ -57,6 +109,25 @@ public class SubActivity extends AppCompatActivity {
     private String clickedItemKey; // clickedItemKey 변수를 선언합니다.
 
     private boolean[] itemClicked; // 아이템 클릭 여부를 저장하는 배열
+
+
+    private static final int REQUEST_ENABLE_BT = 10;
+    private BluetoothAdapter bluetoothAdapter;
+    private Set<BluetoothDevice> devices;
+    private BluetoothDevice bluetoothDevice;
+    private BluetoothSocket bluetoothSocket = null;
+    private OutputStream outputStream = null;
+    private InputStream inputStream = null;
+    private Thread workerThread = null;
+    private byte[] readBuffer;
+    private int readBufferPosition;
+    private TextView textView_pm25;
+    private TextView textView_conncetDevice;
+    private Dialog dialog_help;
+    //private BackPressCloseHandler backkeyclickhandler;
+    boolean connect_status;
+    int pairedDeviceCount;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -89,8 +160,138 @@ public class SubActivity extends AppCompatActivity {
         NavigationActivity navigationActivity = new NavigationActivity(this, mDrawerLayout);
         navigationView.setNavigationItemSelectedListener(navigationActivity);
 
+
+        textView_pm25 = findViewById(R.id.pm25);
+        textView_conncetDevice = findViewById(R.id.connectname);
+
+
+        bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+
+        if (bluetoothAdapter == null) {
+            Toast.makeText(getApplicationContext(), "Bluetooth 미지원 기기입니다.", Toast.LENGTH_SHORT).show();
+        } else {
+            if (!bluetoothAdapter.isEnabled()) {
+                Intent intent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+                startActivityForResult(intent, REQUEST_ENABLE_BT);
+            }
+            selectBluetoothDevice();
+        }
+
+
+    }
+    public void selectBluetoothDevice() {
+        devices = bluetoothAdapter.getBondedDevices();
+        pairedDeviceCount = devices.size();
+
+        if (pairedDeviceCount == 0) {
+            Toast.makeText(getApplicationContext(), "먼저 Bluetooth 설정에 들어가 페어링을 진행해 주세요.", Toast.LENGTH_SHORT).show();
+        } else {
+            AlertDialog.Builder builder = new AlertDialog.Builder(this);
+            builder.setTitle("페어링 된 블루투스 디바이스 목록");
+            List<String> list = new ArrayList<>();
+            for (BluetoothDevice bluetoothDevice : devices) {
+                list.add(bluetoothDevice.getName());
+            }
+            list.add("취소");
+
+            final CharSequence[] charSequences = list.toArray(new CharSequence[0]);
+
+            builder.setItems(charSequences, new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    connectDevice(charSequences[which].toString());
+                }
+            });
+            builder.setCancelable(false);
+            AlertDialog alertDialog = builder.create();
+            alertDialog.show();
+        }
+    }
+    /*
+        @Override
+        public void onBackPressed() {
+            backkeyclickhandler.onBackPressed();
+        }
+    */
+    public void connectDevice(String deviceName) {
+        for (BluetoothDevice tempDevice : devices) {
+            if (deviceName.equals(tempDevice.getName())) {
+                bluetoothDevice = tempDevice;
+                break;
+            }
+        }
+        Toast.makeText(getApplicationContext(), bluetoothDevice.getName() + " 연결 완료!", Toast.LENGTH_SHORT).show();
+        UUID uuid = UUID.fromString("00001101-0000-1000-8000-00805f9b34fb");
+        connect_status = true;
+
+        try {
+            bluetoothSocket = bluetoothDevice.createRfcommSocketToServiceRecord(uuid);
+            bluetoothSocket.connect();
+            outputStream = bluetoothSocket.getOutputStream();
+            inputStream = bluetoothSocket.getInputStream();
+            receiveData();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        textView_conncetDevice.setText(bluetoothDevice.getName());
     }
 
+    public void receiveData() {
+        final Handler handler = new Handler();
+        readBufferPosition = 0;
+        readBuffer = new byte[1024];
+
+        workerThread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                while (!Thread.currentThread().isInterrupted()) {
+                    try {
+                        int byteAvailable = inputStream.available();
+                        if (byteAvailable > 0) {
+                            byte[] bytes = new byte[byteAvailable];
+                            inputStream.read(bytes);
+                            for (int i = 0; i < byteAvailable; i++) {
+                                byte tempByte = bytes[i];
+                                if (tempByte == '\n') {
+                                    byte[] encodedBytes = new byte[readBufferPosition];
+                                    System.arraycopy(readBuffer, 0, encodedBytes, 0, encodedBytes.length);
+                                    final String text = new String(encodedBytes, "US-ASCII");
+                                    readBufferPosition = 0;
+                                    handler.post(new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            textView_pm25.setText(text);
+
+                                        }
+                                    });
+                                } else {
+                                    readBuffer[readBufferPosition++] = tempByte;
+                                }
+                            }
+                        }
+                    } catch (IOException ex) {
+                        stopWorkerThread();
+                    }
+                }
+            }
+        });
+        workerThread.start();
+    }
+
+    public void sendData(String text) {
+        text += "\n";
+        try {
+            outputStream.write(text.getBytes());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void stopWorkerThread() {
+        if (workerThread != null && !workerThread.isInterrupted()) {
+            workerThread.interrupt();
+        }
+    }
     private void loadAndDisplayData() {
         FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
         if (currentUser != null) {

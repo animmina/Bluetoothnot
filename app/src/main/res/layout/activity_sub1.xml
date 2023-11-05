@@ -11,10 +11,11 @@
         android:layout_height="match_parent">
 
         <androidx.appcompat.widget.Toolbar
-        android:id="@+id/toolbar"
+            android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
-            android:background="?attr/colorPrimary">
+            android:background="?attr/colorPrimary"
+            app:layout_constraintTop_toTopOf="parent">
 
             <ImageButton
                 android:id="@+id/menu_button"
@@ -24,9 +25,34 @@
                 android:background="@android:color/transparent"
                 android:contentDescription="@string/menu_icon_description"
                 android:onClick="openDrawer" />
-
         </androidx.appcompat.widget.Toolbar>
 
+        <!-- Newly added TextView for the device connection -->
+        <TextView
+            android:id="@+id/connectname"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="연결된 디바이스가 없습니다"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            app:layout_constraintTop_toBottomOf="@+id/toolbar"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            android:layout_marginTop="16dp" />
+
+        <!-- Newly added TextView for PM2.5 value -->
+        <TextView
+            android:id="@+id/pm25"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="NAME"
+            android:textSize="24sp"
+            app:layout_constraintTop_toBottomOf="@+id/connectname"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            android:layout_marginTop="20dp" />
+
+        <!-- TextView "냉장고 속 재료" -->
         <TextView
             android:id="@+id/textView"
             android:layout_width="match_parent"
@@ -35,8 +61,9 @@
             android:text="냉장고 속 재료"
             android:textColor="#1F51B7"
             android:textSize="24sp"
-            app:layout_constraintTop_toBottomOf="@id/toolbar" />
+            app:layout_constraintTop_toBottomOf="@+id/pm25" />
 
+        <!-- ListView for the items -->
         <ListView
             android:id="@+id/list_view"
             android:layout_width="match_parent"
@@ -49,8 +76,10 @@
             android:focusableInTouchMode="false"
             android:longClickable="false"
             app:layout_constraintTop_toBottomOf="@id/textView"
-            app:layout_constraintBottom_toTopOf="@id/add_button" />
+            app:layout_constraintBottom_toTopOf="@id/add_button"
+            tools:layout_editor_absoluteX="0dp" />
 
+        <!-- Add Button -->
         <Button
             android:id="@+id/add_button"
             android:layout_width="wrap_content"
@@ -62,10 +91,10 @@
             android:text="+"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintHorizontal_bias="0.295"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/list_view" />
 
+        <!-- Delete Button -->
         <Button
             android:id="@+id/delete_button"
             android:layout_width="wrap_content"
@@ -77,9 +106,9 @@
             android:layout_marginTop="8dp"
             android:layout_marginStart="8dp"
             android:layout_marginBottom="16dp" />
-
     </androidx.constraintlayout.widget.ConstraintLayout>
 
+    <!-- NavigationView for the drawer -->
     <com.google.android.material.navigation.NavigationView
         android:id="@+id/nav_view"
         android:layout_width="wrap_content"
@@ -88,5 +117,5 @@
         android:fitsSystemWindows="true"
         app:headerLayout="@layout/navi_header"
         app:menu="@menu/navi_menu" />
-
 </androidx.drawerlayout.widget.DrawerLayout>
+
